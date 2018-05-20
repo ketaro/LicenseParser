@@ -7,6 +7,10 @@ I searched the web for a library that does this, but everything I was finding wa
 
 Some higher-end scanners can parse out these codes and return them in the order you desire.  If you've got one of those fancy scanners, you don't need this library.  This is for scanners that don't do any of the parsing and just return the raw data from the barcode as if you typed it on a keyboard.
 
+This is just something I threw together in one night to test if I could do it.  It's not all that robust in terms of error checking, header validation and what not.  I've only been able to test against a small handful of license samples from DMV's kind enough to post samples online.
+
+*THIS IS NOT PRODUCTION READY CODE!!*  It's a nice start, but use at your own risk!
+
 How to use:
 ```javascript
 <script type="text/javascript" src="licenseparser.js"></script>
