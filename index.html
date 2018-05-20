@@ -1,0 +1,68 @@
+<html>
+<body>
+
+<table border="0" width="100%">
+  <tr>
+     <td>
+        <h3>Input</h3>
+        <textarea id="textin" cols="80" rows="10"></textarea>
+        
+        
+        <h3>Console</h3>
+        <textarea id="keycodes" cols="80" rows="20" wrap="soft"></textarea>
+     </td>
+     <td valign="top">
+         <h3>Scanned Data</h3>
+         
+         <p>
+             <input id="firstname" type="text" name="firstname" size="15" placeholder="First Name" />
+             <input id="middlename" type="text" name="middlename" size="15" placeholder="Middle Name" />
+             <input id="lastname" type="text" name="lastname" size="20" placeholder="Last Name" />
+         </p>
+        
+         <p>
+             <label>Address</label><br/>
+             <input id="address1" type="text" name="address1" size="30" placeholder="Address Line 1" /><br/>
+             <input id="address2" type="text" name="address2" size="30" placeholder="Address Line 2" /><br/>
+             <input id="city" type="text" name="city" size="20" placeholder="City" />,
+             <input id="state" type="text" name="state" size="8" placeholder="State" />
+             <input id="zip" type="text" name="zip" size="12" placeholder="Postal Code" />
+         </p>
+         
+         <p>
+             <label>DOB</label><br/>
+             <input id="dob" type="text" name="dob" size="15" placeholder="MMDDCCYY" />
+         </p>
+
+     </td>
+  </tr>
+</table>
+
+
+<script type="text/javascript" src="licenseparser.js"></script>
+<script type="text/javascript">
+<!--
+
+    function scanCallback(data) {
+        console.log(data);
+        document.getElementById('firstname').value = data['first_name'];
+        document.getElementById('middlename').value = data['middle_name'];
+        document.getElementById('lastname').value  = data['last_name'];
+        document.getElementById('address1').value  = data['address_1'];
+        document.getElementById('address2').value  = data['address_2'];
+        document.getElementById('city').value      = data['city'];
+        document.getElementById('state').value     = data['state'];
+        document.getElementById('zip').value       = data['postal_code'];
+        document.getElementById('dob').value       = data['dob'];
+    }
+
+    // Initalize the license parser library and pass a callback function
+    // to be called after a completed scan
+    licenseParser.init(scanCallback);
+    
+// -->
+</script>
+    
+
+</body>
+</html>
