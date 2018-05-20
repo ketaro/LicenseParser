@@ -27,6 +27,7 @@ var licenseParser = {
     version: "1.0",
     
     callback: null,
+    log: function(txt) {},      // Log function
     
     keystack: [],
     data: {},
@@ -36,8 +37,6 @@ var licenseParser = {
     capturing: false,
     entries: 0,
     capture_count: 0,
-    
-    console: document.getElementById( 'keycodes' ),
     
     // Mapping of Element IDs to common field names
     license_fields: {
@@ -64,9 +63,11 @@ var licenseParser = {
     },
     
     // Initalize the Library
-    init: function(callback) {
+    init: function(callback, log=null) {
         // Store our callback function
         this.callback = callback;
+        if (log)
+            this.log = log;
         
         // Capture keypress events
         document.onkeypress = this.keypress_handler;
@@ -123,12 +124,12 @@ var licenseParser = {
         else if (self.isST(key))
             self.on_segment_end();
         else
-            self.console.value += key.key;
+            self.log(key.key);
     },
     
     // Data Element Seperator found
     on_des: function() {
-        this.console.value += "\n---[ Data Element Separator ]---\n";
+        this.log("\n");
         
         if (this.capturing) {
             if (this.header.filetype)
@@ -142,13 +143,15 @@ var licenseParser = {
 
     },
     
+    // As per the 2016 Card Design Standard,
+    // There is no special case defined for when this field (record seperator) will be used. 
+    // It is embodied within the recommendation for future growth.
     on_record_separator: function() {
-        this.console.value += "\n---[ Record Separator ]---\n";
-        
+        this.log("\n---[ Record Separator ]---\n");
     },
     
     on_segment_end: function() {
-        this.console.value += "\n---[ Segement Terminator ]--- (capture: " + this.capturing + ")\n";
+        this.log("\n---[ Segement Terminator ]--- (capture: " + this.capturing + ")\n");
         
         if ( this.capturing ) { // done with this segment
             this.entries += 1;
@@ -177,12 +180,12 @@ var licenseParser = {
         this.header = {};
 
         this.keystack = [];
-        this.console.value += "\n---[ Start Capture ]---\n";
+        this.log("\n---[ Start Capture ]---\n");
     },
     
     done_capture: function() {
         this.capturing = false;
-        this.console.value += "\n---[ Done Capture ]---\n";
+        this.log("\n---[ Done Capture ]---\n");
         
         // On completed capture, the "@\n" that started the capture will have escaped
         // as type characters.  If there's an active field, see if we can remove them...
@@ -222,7 +225,7 @@ var licenseParser = {
     abort_capture: function() {
         this.capturing = false;
 
-        this.console.value += "\n---[ Aborting Capture ]---\n";
+        this.log("\n---[ Aborting Capture ]---\n");
     },
     
     // Returns a string of what is currently in the keystack
@@ -243,7 +246,7 @@ var licenseParser = {
     process_header: function() {
         this.header = {};
         
-        this.console.value += "\n---[ Processing Header ]---\n";
+        this.log("\n---[ Processing Header ]---\n");
         
         // Get the text accumulated in the stack so far
         var header_data = this.stack_text();

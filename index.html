@@ -43,6 +43,9 @@
 <script type="text/javascript">
 <!--
 
+    var console_field = document.getElementById( 'keycodes' );
+
+
     function scanCallback(data) {
         console.log(data);
         document.getElementById('firstname').value = data['first_name'];
@@ -54,11 +57,17 @@
         document.getElementById('state').value     = data['state'];
         document.getElementById('zip').value       = data['postal_code'];
         document.getElementById('dob').value       = data['dob'];
+    };
+    
+    function logToConsoleField(txt) {
+        console_field.value += txt;
+        console_field.scrollTop = console_field.scrollHeight;
     }
+    
 
     // Initalize the license parser library and pass a callback function
     // to be called after a completed scan
-    licenseParser.init(scanCallback);
+    licenseParser.init(scanCallback, logToConsoleField);
     
 // -->
 </script>
