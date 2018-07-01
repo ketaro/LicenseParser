@@ -2,12 +2,37 @@
 	"name": "Drivers License Scanner",
 	"version": "1.0",
 	"description": "Plugin to detect when a driver's license is scanned and populate form fields.",
+	"permissions": [ "activeTab", "declarativeContent", "storage" ],
 	"background": {
 		"scripts": ["background.js"],
 		"persistent": false
 	},
+// 	"options_page": "options.html",
+/*
 	"page_action": {
-		"default_popup": "popup.html"
+		"default_popup": "popup.html",
+		"default_icon": {
+    		"16": "images/licenseparser_icon-16.png",
+    		"32": "images/licenseparser_icon-32.png",
+    		"48": "images/licenseparser_icon-48.png",
+    		"128": "images/licenseparser_icon-128.png"
+		}
 	},
-	"manifest_version": 2
+*/
+	"icons": {
+		"16": "images/licenseparser_icon-16.png",
+		"32": "images/licenseparser_icon-32.png",
+		"48": "images/licenseparser_icon-48.png",
+		"128": "images/licenseparser_icon-128.png"
+	},
+	"content_scripts": [
+    	{
+        	"matches": [ "http://localhost/*" ],
+        	"css": [ "licenseparser.css" ],
+        	"js": [ "licenseparser.js", "content-inject.js" ],
+        	"run_at": "document_idle"
+    	}
+	],
+
+	"manifest_version": 3
 }

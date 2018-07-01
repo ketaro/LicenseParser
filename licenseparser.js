@@ -26,8 +26,11 @@
 var licenseParser = {
     version: "1.0",
     
-    callback: null,
-    log: function(txt) {},      // Log function
+    // Callbacks
+    startCaptureCallback:   null,
+    doneCaptureCallback:    null,
+    abortedCaptureCallback: null,
+    log: function(txt) {},      // Debug Log function
     
     keystack: [],
     data: {},
@@ -58,16 +61,14 @@ var licenseParser = {
         'DAP': 'postal_code',
         'DBB': 'dob',
         'DBC': 'gender',
+        'DCG': 'country',
         'DCS': 'last_name',
         'DCT': 'first_name',
     },
     
     // Initalize the Library
-    init: function(callback, log=null) {
-        // Store our callback function
-        this.callback = callback;
-        if (log)
-            this.log = log;
+    init: function() {
+        console.log('[licenseParser] init');
         
         // Capture keypress events
         document.onkeypress = this.keypress_handler;
@@ -181,6 +182,10 @@ var licenseParser = {
 
         this.keystack = [];
         this.log("\n---[ Start Capture ]---\n");
+
+        // Call the registered callback
+        if (this.startCaptureCallback)
+            this.startCaptureCallback();
     },
     
     done_capture: function() {
@@ -196,6 +201,15 @@ var licenseParser = {
             else if (str.endsWith("@")) // one-line input fields won't have the \n
                 document.activeElement.value = str.substring(0, str.length-1)
         }
+        
+        if (this.data.first_name &&
+            this.data.first_name.includes(",") &&
+            !this.data.middle_name) {
+            var name = this.data.first_name.split(",");
+            this.data.first_name = name[0];
+            this.data.middle_name = name[1];
+        }
+        
         
         // Convoluted full name parsing 
         if (this.data.full_name) {
@@ -215,17 +229,28 @@ var licenseParser = {
                 this.data.first_name = fn;
             if (!this.data.middle_name)
                 this.data.middle_name = mn;
+        } else {
+            // Not as convoluted full name concatination
+            this.data.full_name = [ this.data.first_name, this.data.last_name ].join(' ');
         }
         
+        if (this.data.country && this.data.country == "USA")
+            this.data.country = "US";
+        
         // Call the registered callback
-        if (this.callback)
-            this.callback(this.data);
+        if (this.doneCaptureCallback)
+            this.doneCaptureCallback(this.data);
     },
     
     abort_capture: function() {
         this.capturing = false;
 
         this.log("\n---[ Aborting Capture ]---\n");
+
+        // Call the registered callback
+        if (this.abortedCaptureCallback)
+            this.abortedCaptureCallback();
+
     },
     
     // Returns a string of what is currently in the keystack

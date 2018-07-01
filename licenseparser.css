@@ -1,0 +1,15 @@
+
+.ax_licenseparser_status {
+    position: fixed;
+    width: 80%;
+    top: 0;
+    right: 10%;
+    background-color: rgba(41, 73, 255, 0.7);
+    border: 1px solid black;
+    box-shadow: 5px 5px 5px grey;
+    text-align: center;
+}
+
+.ax_licenseparser_hidden {
+    visibility: hidden;
+}
