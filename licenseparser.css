@@ -4,10 +4,17 @@
     width: 80%;
     top: 0;
     right: 10%;
-    background-color: rgba(41, 73, 255, 0.7);
+    background-color: rgba(41, 73, 255, 0.8);
     border: 1px solid black;
     box-shadow: 5px 5px 5px grey;
     text-align: center;
+    z-index: 1000;
+    min-height: 32px;
+    color: #fffb00;
+}
+
+.ax_licenseparser_status h3 {
+    margin-top: 5px;
 }
 
 .ax_licenseparser_hidden {

@@ -27,7 +27,7 @@
 	},
 	"content_scripts": [
     	{
-        	"matches": [ "http://localhost/*" ],
+        	"matches": [ "http://localhost/*", "https://*.showclix.com/*" ],
         	"css": [ "licenseparser.css" ],
         	"js": [ "licenseparser.js", "content-inject.js" ],
         	"run_at": "document_idle"

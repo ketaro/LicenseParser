@@ -8,6 +8,7 @@ var axLicenseParserInject = {
     
     scan_data: {},  // Results from scan
 
+    statusDiv: null,
     console_field: document.getElementById( 'keycodes' ),
     
     init: function() {
@@ -18,9 +19,10 @@ var axLicenseParserInject = {
 
         // Initalize the license parser library and pass a callback function
         // to be called after a completed scan
-        licenseParser.startCaptureCallback = this.onCaptureStarted;
-        licenseParser.doneCaptureCallback  = this.onCaptureDone;
-        licenseParser.log = this.logToConsoleField;
+        licenseParser.startCaptureCallback    = this.onCaptureStarted;
+        licenseParser.doneCaptureCallback     = this.onCaptureDone;
+        licenseParser.abortedCaptureCallback  = this.onCaptureFailed;
+        licenseParser.log                     = this.logToConsoleField;
         
         licenseParser.init();
     },
@@ -33,16 +35,37 @@ var axLicenseParserInject = {
         div.innerHTML = "<h3>Scanning barcode, please wait...</h3>";
         
         document.body.appendChild(div);
+        this.statusDiv = div;
+    },
+    
+    status: function(text) {
+        var hiddenClass = "ax_licenseparser_hidden";
+        
+        if (text) {
+            this.statusDiv.innerHTML = "<h3>" + text + "</h3>";
+            this.statusDiv.classList.remove(hiddenClass);
+        } else {
+            // Hide Status DIV
+            this.statusDiv.classList.add(hiddenClass);
+        }
+    },
+    
+    
+    // Return a field object based on a key from our internal
+    // ticket_fields object
+    getTicketField: function(ticket_id, key) {
+        if (self.ticket_fields[ticket_id].hasOwnProperty(key)) {
+            return document.getElementById(this.ticket_fields[ticket_id][key]);
+        }
+        return null;
     },
     
 
     // Called when capture is starting
     // (so we can display the status)
     onCaptureStarted: function() {
-        console.log("[LicenseParserExtension] Capture Started");
-        document.getElementById("ax_licenseparser_status")
-                .classList
-                .remove("ax_licenseparser_hidden");
+        self = axLicenseParserInject;
+        self.status("Scanning Barcode, please wait...");
     },
 
     
@@ -52,30 +75,38 @@ var axLicenseParserInject = {
         self = axLicenseParserInject;
         self.scan_data = data;
 
-        console.log("[LicenseParserExtension] Capture Complete");
+        self.status("Capture complete, setting fields...");
 
         // Detect ticket fields
         self.scanFields();
         
         // Set data in ticket fields
-        if (self.ticket_ids.length > 0) {
+        if (self.ticket_ids.length == 1) {
             self.setFields( self.ticket_ids[0] );
+        } else if (self.ticket_ids.length > 0) {
+            
+            // Find the first empty ticket to insert our data
+            for (var i=0; i < self.ticket_ids.length; i++) {
+                var ticket_id = self.ticket_ids[i];
+                var field = self.getTicketField(ticket_id, "full_name");
+                
+                if (field && field.value == "") {
+                    // Found one
+                    self.setFields( self.ticket_ids[i] );
+                    break;
+                }
+            }
         }
         
-        document.getElementById("ax_licenseparser_status").classList.add("ax_licenseparser_hidden");
-    
-        console.log(data);
-        document.getElementById('firstname').value  = data['first_name'];
-        document.getElementById('middlename').value = data['middle_name'];
-        document.getElementById('lastname').value   = data['last_name'];
-        document.getElementById('address1').value   = data['address_1'];
-        document.getElementById('address2').value   = data['address_2'];
-        document.getElementById('city').value       = data['city'];
-        document.getElementById('state').value      = data['state'];
-        document.getElementById('zip').value        = data['postal_code'];
-        document.getElementById('dob').value        = data['dob'];
+        self.status(false);
     },
     
+    
+    // Called if a capture fails
+    onCaptureFailed: function() {
+        self.status("Capture failed");
+        
+    },
 
     // Sets the fields for a given ticket_id with values from the last scan
     setFields: function( ticket_id ) {
@@ -91,24 +122,29 @@ var axLicenseParserInject = {
             'country':     'country',
         };
         
+        // Default country field to US
+        var countryField = this.getTicketField(ticket_id, "country");
+        countryField.value = 'US';
+        
         // Fields in the address question we can easily map
         for (var key in field_map) {
             var value = field_map[key];
+            var field = this.getTicketField(ticket_id, key);
             if (this.scan_data.hasOwnProperty(value))
-                document.getElementById(this.ticket_fields[ticket_id][key]).value =
-                    this.scan_data[value];
+                field.value = this.scan_data[value];
         }
         
         // Gender
         if (this.ticket_fields[ticket_id].hasOwnProperty("gender") &&
             this.scan_data.hasOwnProperty("gender")) {
-            var genderField = document.getElementById(this.ticket_fields[ticket_id]["gender"]);
-            
-            if (!isNaN(this.scan_data["gender"])) {
-                // numeric gender data; 1-male, 2-female
-                genderField.selectedIndex = this.scan_data["gender"];
-            } else {
-                genderField.value = this.scan_data["gender"];
+            var genderField = this.getTicketField(ticket_id, "gender");
+            if (genderField) {
+                if (!isNaN(this.scan_data["gender"])) {
+                    // numeric gender data; 1-male, 2-female
+                    genderField.selectedIndex = this.scan_data["gender"];
+                } else {
+                    genderField.value = this.scan_data["gender"];
+                }
             }
         }
         
@@ -116,13 +152,17 @@ var axLicenseParserInject = {
         document.getElementById('ticket_name_' + ticket_id).value = this.scan_data['full_name'];
         
         // DOB
-        if (this.ticket_fields[ticket_id].hasOwnProperty("dob") &&
-            this.scan_data.hasOwnProperty("dob")) {
-            var dobField = document.getElementById(this.ticket_fields[ticket_id]["dob"]);
-
-            dobField.value = this.scan_data["dob"];
+        var dobField = this.getTicketField(ticket_id, "dob");
+        if (dobField && this.scan_data.hasOwnProperty("dob")) {
+            if ( this.scan_data["dob"] instanceof Date ) {
+                var d = this.scan_data["dob"];
+                var m = (d.getMonth()+1).toString().padStart(2, "0");
+                
+                dobField.value = m + '/' + d.getDate().toString().padStart(2, "0") + '/' + d.getFullYear();
+            } else {
+                dobField.value = this.scan_data["dob"];
+            }
         }
-        
         
     },
 
@@ -131,8 +171,10 @@ var axLicenseParserInject = {
     logToConsoleField: function(txt) {
         self = axLicenseParserInject;
         
-        self.console_field.value += txt;
-        self.console_field.scrollTop = self.console_field.scrollHeight;
+        if (self.console_field) {
+            self.console_field.value += txt;
+            self.console_field.scrollTop = self.console_field.scrollHeight;
+        }
     },
 
 
@@ -147,7 +189,7 @@ var axLicenseParserInject = {
         for (var i=0; i < inputs.length; i++) {
             var thisField = inputs[i];
             
-            console.log("[LicenseParserExtension] found input field: " + thisField.name);
+//             console.log("[LicenseParserExtension] found input field: " + thisField.name);
             
             var m = thisField.name.match(/answer\[Ticket\]\[(\d+)\]\[(\d+)\]\[(\w+)\]/);
             if (m) {
@@ -163,7 +205,7 @@ var axLicenseParserInject = {
                 this.ticket_fields[ticket_id][field_name] = thisField.id;
             } else {
                 
-                if (thisField.labels.length > 0) {
+                if (thisField.labels && thisField.labels.length > 0) {
                     if (thisField.labels[0].innerText.toLowerCase() == "gender")
                         this.ticket_fields[ticket_id]["gender"] = thisField.id;
 

@@ -210,7 +210,6 @@ var licenseParser = {
             this.data.middle_name = name[1];
         }
         
-        
         // Convoluted full name parsing 
         if (this.data.full_name) {
             var name = this.data.full_name.split(",");
@@ -236,6 +235,14 @@ var licenseParser = {
         
         if (this.data.country && this.data.country == "USA")
             this.data.country = "US";
+        
+        if (this.data.dob && this.data.dob.length == 8) {
+            var dob_year  = this.data.dob.substr(0,4);
+            var dob_month = this.data.dob.substr(4, 2);
+            var dob_day   = this.data.dob.substr(6, 2);
+            
+            this.data.dob = new Date( dob_year, dob_month, dob_day );
+        }
         
         // Call the registered callback
         if (this.doneCaptureCallback)
@@ -279,8 +286,10 @@ var licenseParser = {
         var pos = 0;
         if (header_data.substr(0,5) === "ANSI ")
             pos = 5;
-        if (header_data.substr(0,6) === "AAMVA ")
+        else if (header_data.substr(0,6) === "AAMVA ")
             pos = 6;
+        else if (header_data.substr(0,5) === "AAMVA")
+            pos = 5;
         
         this.header.filetype = header_data.substr(0, pos).trim();
 
@@ -305,7 +314,9 @@ var licenseParser = {
         // Remove header data from keystack, rest is subfile header data
         this.keystack = this.keystack.slice(pos);
         this.process_subfile_header();
-
+        
+        // If there's still data left, process it.
+        this.process_data();
     },
     
     // Process a subfile header
@@ -318,6 +329,9 @@ var licenseParser = {
         this.subfile.type = header_data.substr(pos, 2);  pos += 2;
         this.subfile.offset = parseInt(header_data.substr(pos, 4)); pos += 4;
         this.subfile.size   = parseInt(header_data.substr(pos, 4)); pos += 4;
+        
+        // Remove subfile header data from keystack
+        this.keystack = this.keystack.slice(10);
     },
     
     // Process data in a subfile
