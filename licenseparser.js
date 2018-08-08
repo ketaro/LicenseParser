@@ -241,7 +241,13 @@ var licenseParser = {
             var dob_month = this.data.dob.substr(4, 2);
             var dob_day   = this.data.dob.substr(6, 2);
             
-            this.data.dob = new Date( dob_year, dob_month, dob_day );
+            if (dob_year < 1900) {
+                dob_month = this.data.dob.substr(0, 2);
+                dob_day   = this.data.dob.substr(2, 2);
+                dob_year  = this.data.dob.substr(4, 4);
+            }
+            
+            this.data.dob = new Date( dob_year, dob_month-1, dob_day );
         }
         
         // Call the registered callback
