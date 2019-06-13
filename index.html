@@ -15,9 +15,15 @@
          <h3>Scanned Data</h3>
          
          <p>
+             <label>First, Middle, Last</label><br/>
              <input id="firstname" type="text" name="firstname" size="15" placeholder="First Name" />
              <input id="middlename" type="text" name="middlename" size="15" placeholder="Middle Name" />
              <input id="lastname" type="text" name="lastname" size="20" placeholder="Last Name" />
+         </p>
+
+         <p>
+             <label>Full Name</label><br/>
+             <input id="fullname" type="text" name="fullname" size="40" placeholder="Full Name" /><br/>
          </p>
         
          <p>
@@ -34,6 +40,10 @@
              <input id="dob" type="text" name="dob" size="15" placeholder="MMDDCCYY" />
          </p>
 
+         <p>
+             <label>Password</label><br/>
+             <input id="passwd" type="password" name="passwd" size="15" placeholder="not captured" />
+         </p>
      </td>
   </tr>
 </table>
@@ -41,33 +51,33 @@
 
 <script type="text/javascript" src="licenseparser.js"></script>
 <script type="text/javascript">
-<!--
 
     var console_field = document.getElementById( 'keycodes' );
 
-
     function scanCallback(data) {
         console.log(data);
-        document.getElementById('firstname').value = data['first_name'];
+        document.getElementById('firstname').value  = data['first_name'];
         document.getElementById('middlename').value = data['middle_name'];
-        document.getElementById('lastname').value  = data['last_name'];
-        document.getElementById('address1').value  = data['address_1'];
-        document.getElementById('address2').value  = data['address_2'];
-        document.getElementById('city').value      = data['city'];
-        document.getElementById('state').value     = data['state'];
-        document.getElementById('zip').value       = data['postal_code'];
-        document.getElementById('dob').value       = data['dob'];
+        document.getElementById('lastname').value   = data['last_name'];
+        document.getElementById('fullname').value   = data['full_name'];
+        document.getElementById('address1').value   = data['address_1'];
+        document.getElementById('address2').value   = data['address_2'] || "";
+        document.getElementById('city').value       = data['city'];
+        document.getElementById('state').value      = data['state'];
+        document.getElementById('zip').value        = data['postal_code'];
+        document.getElementById('dob').value        = data['dob'];
     };
     
     function logToConsoleField(txt) {
         console_field.value += txt;
         console_field.scrollTop = console_field.scrollHeight;
     }
-    
 
     // Initalize the license parser library and pass a callback function
     // to be called after a completed scan
-    licenseParser.init(scanCallback, logToConsoleField);
+    licenseParser.init();
+    licenseParser.doneCaptureCallback = scanCallback;
+    licenseParser.log = logToConsoleField;
     
 // -->
 </script>

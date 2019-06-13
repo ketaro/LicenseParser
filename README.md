@@ -17,9 +17,9 @@ How to use:
 <script type="text/javascript">
 
   function onParsedData(data) {
-      document.getElementById('firstname').value  = data['first_name'];
-      document.getElementById('middlename').value = data['middle_name'];
-      document.getElementById('lastname').value   = data['last_name'];
+      document.getElementById('firstname').value  = data['first_name'] || "";
+      document.getElementById('middlename').value = data['middle_name'] || "";
+      document.getElementById('lastname').value   = data['last_name'] || "";
   }
 
   // Initalize the license parser library and pass a callback function

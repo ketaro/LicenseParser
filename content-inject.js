@@ -1,6 +1,6 @@
 
 var axLicenseParserInject = {
-    version: "0.9",
+    version: "1.0",
     port: chrome.runtime.connect(),
 
     ticket_ids: [],

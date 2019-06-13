@@ -3,10 +3,12 @@
 	"version": "1.0",
 	"description": "Plugin to detect when a driver's license is scanned and populate form fields.",
 	"permissions": [ "activeTab", "declarativeContent", "storage" ],
+/*
 	"background": {
 		"scripts": ["background.js"],
 		"persistent": false
 	},
+*/
 // 	"options_page": "options.html",
 /*
 	"page_action": {
@@ -34,5 +36,5 @@
     	}
 	],
 
-	"manifest_version": 3
+	"manifest_version": 2
 }

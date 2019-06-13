@@ -24,7 +24,7 @@
 */
 
 var licenseParser = {
-    version: "1.0",
+    version: "1.1",
     
     // Callbacks
     startCaptureCallback:   null,
@@ -40,7 +40,7 @@ var licenseParser = {
     capturing: false,
     entries: 0,
     capture_count: 0,
-    
+
     // Mapping of Element IDs to common field names
     license_fields: {
         'DAA': 'full_name',
@@ -72,6 +72,7 @@ var licenseParser = {
         
         // Capture keypress events
         document.onkeypress = this.keypress_handler;
+        document.onkeydown = this.key_handler;
     },
     
     // Returns an object containing just the data we care about from the keypress event
@@ -88,8 +89,12 @@ var licenseParser = {
     // Push a key onto the stack
     stackpush: function( item ) {
         this.keystack.push( item );
-        
-        while (this.keystack.length > 100)
+        let stacksize = 5;
+        if (this.capturing)
+            stacksize = 256;
+       
+        // pull elements off until we're under our stack size limit
+        while (this.keystack.length > stacksize)
             this.keystack.shift();
             
     },
@@ -102,12 +107,26 @@ var licenseParser = {
     
     // Returns true if key is the Segment Terminator (CR/Enter)
     isST: function( key ) { return ( key.keyCode == 13 ); },
-    
+   
+    // Handle key up/down events, looking for CTRL+SHIFT+j
+    // We need to trap it here so it doesn't open the debug console
+    // (Chrome on Windows)
+    key_handler: function(e) {
+        if (e.keyCode == "J".charCodeAt(0) && e.shiftKey && e.ctrlKey) {
+            licenseParser.keypress_handler(e);
+            return false; // stop processing this key
+        }
+    },
+
     // Event handler for when a key is pressed.
     keypress_handler: function(e) {
         e = e || window.event;
         var self = licenseParser;
         var key  = self.keyobj(e);
+
+        // If we're in a password field, abort
+        if (document.activeElement.type == 'password')
+            return true;
 
         self.stackpush(key);
 
@@ -124,13 +143,14 @@ var licenseParser = {
             self.on_record_separator();
         else if (self.isST(key))
             self.on_segment_end();
-        else
+        else if (self.capturing)
             self.log(key.key);
     },
     
     // Data Element Seperator found
     on_des: function() {
         this.log("\n");
+        this.log("\n---[ Data Element Separator ]---\n");
         
         if (this.capturing) {
             if (this.header.filetype)
@@ -202,21 +222,16 @@ var licenseParser = {
                 document.activeElement.value = str.substring(0, str.length-1)
         }
         
-        if (this.data.first_name &&
-            this.data.first_name.includes(",") &&
-            !this.data.middle_name) {
-            var name = this.data.first_name.split(",");
-            this.data.first_name = name[0];
-            this.data.middle_name = name[1];
-        }
-        
         // Convoluted full name parsing 
         if (this.data.full_name) {
-            var name = this.data.full_name.split(",");
-            var ln = name[0];
-            var fn = "";
-            var mn = "";
-            if (name.length > 1) {
+            let name = this.data.full_name.split(",");
+            let ln = name[0];
+            let fn = "";
+            let mn = "";
+            if (name.length > 2) { // LAST,FIRST,MIDDLE
+                fn = name[1];
+                mn = name[2];
+            } else if (name.length > 1) { // LAST,FIRST MIDDLE
                 name = name[1].trim().split(" ")
                 fn = name.slice(0, -1).join(" ");
                 mn = name.slice(-1).join(" ");
@@ -228,9 +243,28 @@ var licenseParser = {
                 this.data.first_name = fn;
             if (!this.data.middle_name)
                 this.data.middle_name = mn;
-        } else {
-            // Not as convoluted full name concatination
-            this.data.full_name = [ this.data.first_name, this.data.last_name ].join(' ');
+        }
+       
+        // If first name contains a comma, it's probably FIRST,MIDDLE
+        if (this.data.first_name &&
+            this.data.first_name.includes(",") &&
+            !this.data.middle_name) {
+            let name = this.data.first_name.split(",");
+            this.data.first_name = name[0];
+            this.data.middle_name = name[1];
+        }
+       
+        // If there wasn't a full name in the data, make it
+        if (!this.data.full_name) {
+            let name = [];
+            if (this.data.last_name)
+                name.push(this.data.last_name);
+            if (this.data.first_name)
+                name.push(this.data.first_name);
+            if (this.data.middle_name)
+                name.push(this.data.middle_name);
+            
+            this.data.full_name = name.join(',');
         }
         
         if (this.data.country && this.data.country == "USA")
