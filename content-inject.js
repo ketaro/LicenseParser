@@ -77,25 +77,50 @@ var axLicenseParserInject = {
 
         self.status("Capture complete, setting fields...");
 
-        // Detect ticket fields
-        self.scanFields();
-        
-        // Set data in ticket fields
-        if (self.ticket_ids.length == 1) {
-            self.setFields( self.ticket_ids[0] );
-        } else if (self.ticket_ids.length > 0) {
+        // Check which "screen" we're on
+        if (document.getElementById('checkout_step_2') && 
+            document.getElementById('checkout_step_2').parentElement.style.display != "none") {
+
+            // We're on the billing contact screen
+            if (document.getElementById('checkout_first_name'))
+                document.getElementById('checkout_first_name').value = self.scan_data['first_name'] || "";
+            if (document.getElementById('checkout_last_name'))
+                document.getElementById('checkout_last_name').value = self.scan_data['last_name'] || "";
+            if (document.getElementById('checkout_billing_address_0'))
+                document.getElementById('checkout_billing_address_0').value = self.scan_data['address_1'] || "";
+            if (document.getElementById('checkout_billing_address2_0'))
+                document.getElementById('checkout_billing_address2_0').value = self.scan_data['address_2'] || "";
+            if (document.getElementById('checkout_billing_city_0'))
+                document.getElementById('checkout_billing_city_0').value = self.scan_data['city'] || "";
+            if (document.getElementById('checkout_billing_state_0'))
+                document.getElementById('checkout_billing_state_0').value = self.scan_data['state'] || "";
+            if (document.getElementById('checkout_billing_zip_0'))
+                document.getElementById('checkout_billing_zip_0').value = self.scan_data['postal_code'] || "";
             
-            // Find the first empty ticket to insert our data
-            for (var i=0; i < self.ticket_ids.length; i++) {
-                var ticket_id = self.ticket_ids[i];
-                var field = self.getTicketField(ticket_id, "full_name");
+            
+        } else {
+            // Detect ticket fields
+            self.scanFields();
+            
+            // Set data in ticket fields
+            if (self.ticket_ids.length == 1) {
+                self.setFields( self.ticket_ids[0] );
+            } else if (self.ticket_ids.length > 0) {
                 
-                if (field && field.value == "") {
-                    // Found one
-                    self.setFields( self.ticket_ids[i] );
-                    break;
+                // Find the first empty ticket to insert our data
+                for (var i=0; i < self.ticket_ids.length; i++) {
+                    var ticket_id = self.ticket_ids[i];
+                    var field = self.getTicketField(ticket_id, "full_name");
+                    
+                    if (field && field.value == "") {
+                        // Found one
+                        self.setFields( self.ticket_ids[i] );
+                        break;
+                    }
                 }
             }
+            
+            
         }
         
         self.status(false);
@@ -149,7 +174,8 @@ var axLicenseParserInject = {
         }
         
         // Full Name
-        document.getElementById('ticket_name_' + ticket_id).value = this.scan_data['full_name'];
+        if (document.getElementById('ticket_name_' + ticket_id))
+            document.getElementById('ticket_name_' + ticket_id).value = this.scan_data['full_name'];
         
         // DOB
         var dobField = this.getTicketField(ticket_id, "dob");
@@ -162,6 +188,12 @@ var axLicenseParserInject = {
             } else {
                 dobField.value = this.scan_data["dob"];
             }
+        }
+        
+        // Subscription Preference
+        var subscriptionField = this.getTicketField(ticket_id, "subscription");
+        if (subscriptionField) {
+            subscriptionField.selectedIndex = 1;
         }
         
     },
@@ -212,12 +244,14 @@ var axLicenseParserInject = {
                     if (thisField.labels[0].innerText.toLowerCase().includes("date of birth"))
                         this.ticket_fields[ticket_id]["dob"] = thisField.id;
                     
+                    if (thisField.labels[0].innerText.toLowerCase().includes("subscription"))
+                        this.ticket_fields[ticket_id]["subscription"] = thisField.id;
                 }
             }
             
         }
         
-        console.log(this.ticket_fields);
+        //console.log(this.ticket_fields);
     },
     
     
