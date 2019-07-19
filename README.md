@@ -29,5 +29,11 @@ How to use:
 </script>
 ```
 
+## Build .crx
+
+zip -r LicenseParser.zip *
+crx3-new LicenseParser.pem < LicenseParser.zip > LicenseParser.crx
+
+
 References:
 * https://www.aamva.org/DL-ID-Card-Design-Standard/
