@@ -1,6 +1,6 @@
 
 var axLicenseParserInject = {
-    version: "1.0",
+    version: "1.1",
     port: chrome.runtime.connect(),
 
     ticket_ids: [],
@@ -37,7 +37,7 @@ var axLicenseParserInject = {
         document.body.appendChild(div);
         this.statusDiv = div;
     },
-    
+
     status: function(text) {
         var hiddenClass = "ax_licenseparser_hidden";
         
@@ -49,8 +49,7 @@ var axLicenseParserInject = {
             this.statusDiv.classList.add(hiddenClass);
         }
     },
-    
-    
+
     // Return a field object based on a key from our internal
     // ticket_fields object
     getTicketField: function(ticket_id, key) {
@@ -59,7 +58,6 @@ var axLicenseParserInject = {
         }
         return null;
     },
-    
 
     // Called when capture is starting
     // (so we can display the status)
@@ -67,7 +65,6 @@ var axLicenseParserInject = {
         self = axLicenseParserInject;
         self.status("Scanning Barcode, please wait...");
     },
-
     
     // Called when capture is complete
     // (close the status div and populate form data)
@@ -96,8 +93,7 @@ var axLicenseParserInject = {
                 document.getElementById('checkout_billing_state_0').value = self.scan_data['state'] || "";
             if (document.getElementById('checkout_billing_zip_0'))
                 document.getElementById('checkout_billing_zip_0').value = self.scan_data['postal_code'] || "";
-            
-            
+
         } else {
             // Detect ticket fields
             self.scanFields();
@@ -119,14 +115,11 @@ var axLicenseParserInject = {
                     }
                 }
             }
-            
-            
         }
-        
+
         self.status(false);
     },
-    
-    
+
     // Called if a capture fails
     onCaptureFailed: function() {
         self.status("Capture failed");
@@ -198,7 +191,6 @@ var axLicenseParserInject = {
         
     },
 
-
     // Logs debug data from the license parser
     logToConsoleField: function(txt) {
         self = axLicenseParserInject;
@@ -208,7 +200,6 @@ var axLicenseParserInject = {
             self.console_field.scrollTop = self.console_field.scrollHeight;
         }
     },
-
 
     // Scan document and determine how many name/address fields 
     // we might be dealing with on the page.
@@ -221,7 +212,7 @@ var axLicenseParserInject = {
         for (var i=0; i < inputs.length; i++) {
             var thisField = inputs[i];
             
-//             console.log("[LicenseParserExtension] found input field: " + thisField.name);
+            // console.log("[LicenseParserExtension] found input field: " + thisField.name);
             
             var m = thisField.name.match(/answer\[Ticket\]\[(\d+)\]\[(\d+)\]\[(\w+)\]/);
             if (m) {
@@ -246,17 +237,15 @@ var axLicenseParserInject = {
                     
                     if (thisField.labels[0].innerText.toLowerCase().includes("subscription"))
                         this.ticket_fields[ticket_id]["subscription"] = thisField.id;
+
+                    // Mark the T&Cs as accepted
+                    if (thisField.labels[0].innerText.toLowerCase().includes("terms and conditions"))
+                        thisField.selectedIndex = 1;
                 }
             }
-            
         }
-        
         //console.log(this.ticket_fields);
     },
-    
-    
 };
 
-
 axLicenseParserInject.init();
-

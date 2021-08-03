@@ -24,19 +24,19 @@
 */
 
 var licenseParser = {
-    version: "1.1",
-    
+    version: "1.2",
+ 
     // Callbacks
     startCaptureCallback:   null,
     doneCaptureCallback:    null,
     abortedCaptureCallback: null,
     log: function(txt) {},      // Debug Log function
-    
+
     keystack: [],
     data: {},
     header: {},
     subfile: {},
-    
+
     capturing: false,
     entries: 0,
     capture_count: 0,
@@ -65,7 +65,7 @@ var licenseParser = {
         'DCS': 'last_name',
         'DCT': 'first_name',
     },
-    
+
     // Initalize the Library
     init: function() {
         console.log('[licenseParser] init');
@@ -85,34 +85,35 @@ var licenseParser = {
             shiftKey: keyevent.shiftKey,
         }
     },
-    
+
     // Push a key onto the stack
     stackpush: function( item ) {
         this.keystack.push( item );
-        let stacksize = 5;
+        let stacksize = 10;
         if (this.capturing)
             stacksize = 256;
        
         // pull elements off until we're under our stack size limit
         while (this.keystack.length > stacksize)
             this.keystack.shift();
-            
     },
-    
+
     // Returns true if key is the Data Element Separator key (CTRL+SHIFT+J)
-    isDES: function( key ) { return (key.key === "J" && key.ctrlKey && key.shiftKey); },
-    
+    isDES: function( key ) { return (
+        key.key.toUpperCase() === "J" && key.ctrlKey //&& key.shiftKey
+    ); },
+
     // Returns true if key is the Record Separator 
-    isRS: function( key ) { return (key.keyCode == 30); },
-    
+    isRS: function( key ) { return (key.keyCode === 30); },
+
     // Returns true if key is the Segment Terminator (CR/Enter)
-    isST: function( key ) { return ( key.keyCode == 13 ); },
-   
+    isST: function( key ) { return ( (key.keyCode === 13) || (key.keyCode === 10) ); },
+
     // Handle key up/down events, looking for CTRL+SHIFT+j
-    // We need to trap it here so it doesn't open the debug console
+    // We need to trap it here so it doesn't open the downloads window
     // (Chrome on Windows)
     key_handler: function(e) {
-        if (e.keyCode == "J".charCodeAt(0) && e.shiftKey && e.ctrlKey) {
+        if (e.keyCode == "J".charCodeAt(0) && (e.shiftKey || e.ctrlKey)) {
             licenseParser.keypress_handler(e);
             return false; // stop processing this key
         }
@@ -121,8 +122,8 @@ var licenseParser = {
     // Event handler for when a key is pressed.
     keypress_handler: function(e) {
         e = e || window.event;
-        var self = licenseParser;
-        var key  = self.keyobj(e);
+        let self = licenseParser;
+        let key  = self.keyobj(e);
 
         // If we're in a password field, abort
         if (document.activeElement.type == 'password')
@@ -171,9 +172,12 @@ var licenseParser = {
         this.log("\n---[ Record Separator ]---\n");
     },
     
+    // Received a Segment Terminator (CR/Enter)
+    // If we're capturing, we've completed an entry
+    // If we're not capturing, check if we should start
     on_segment_end: function() {
         this.log("\n---[ Segement Terminator ]--- (capture: " + this.capturing + ")\n");
-        
+
         if ( this.capturing ) { // done with this segment
             this.entries += 1;
             
@@ -186,10 +190,16 @@ var licenseParser = {
             if (this.keystack.length < 3)   // Not enough data in the stack
                 return;
             
-            // If the last two characters we've seen are "@\n", start capturing
-            var tail = this.keystack.slice(-3);
-            if ( tail[0].key === "@" && this.isDES(tail[1]) )
+            // If the last two characters we've seen are "@CTRL+J", start capturing
+            let tail = this.keystack.slice(-3);
+            if (tail[0].key === "@" && this.isDES(tail[1]))
                 this.start_capture();
+            else {
+                // Or sometimes we get a FS keycode in there
+                tail = this.keystack.slice(-4);
+                if (tail[0].key === "@" && this.isDES(tail[1]) && tail[2].keyCode === 28)
+                    this.start_capture();
+            }
         }
     },
     
@@ -222,51 +232,47 @@ var licenseParser = {
                 document.activeElement.value = str.substring(0, str.length-1)
         }
         
-        // Convoluted full name parsing 
+        // Full name parsing 
         if (this.data.full_name) {
-            let name = this.data.full_name.split(",");
-            let ln = name[0];
-            let fn = "";
-            let mn = "";
-            if (name.length > 2) { // LAST,FIRST,MIDDLE
-                fn = name[1];
-                mn = name[2];
-            } else if (name.length > 1) { // LAST,FIRST MIDDLE
-                name = name[1].trim().split(" ")
-                fn = name.slice(0, -1).join(" ");
-                mn = name.slice(-1).join(" ");
-            }
-            
+            let parsedName = this.parseName(this.data.full_name);
+
+            this.data.full_name = parsedName.fullName;
+
             if (!this.data.last_name)
-                this.data.last_name = ln;
+                this.data.last_name = parsedName.lastName;
             if (!this.data.first_name)
-                this.data.first_name = fn;
+                this.data.first_name = parsedName.firstName;
             if (!this.data.middle_name)
-                this.data.middle_name = mn;
-        }
-       
-        // If first name contains a comma, it's probably FIRST,MIDDLE
-        if (this.data.first_name &&
-            this.data.first_name.includes(",") &&
-            !this.data.middle_name) {
-            let name = this.data.first_name.split(",");
-            this.data.first_name = name[0];
-            this.data.middle_name = name[1];
-        }
-       
-        // If there wasn't a full name in the data, make it
-        if (!this.data.full_name) {
+                this.data.middle_name = parsedName.middleName;
+            if (!this.data.name_suffix)
+                this.data.name_suffix = parsedName.suffix;
+            if (!this.data.name_prefix)
+                this.data.name_prefix = parsedName.salutation;
+        } else {
             let name = [];
-            if (this.data.last_name)
-                name.push(this.data.last_name);
             if (this.data.first_name)
                 name.push(this.data.first_name);
             if (this.data.middle_name)
                 name.push(this.data.middle_name);
-            
-            this.data.full_name = name.join(',');
+            if (this.data.last_name)
+                name.push(this.data.last_name);
+            if (this.data.name_suffix)
+                name.push(this.data.name_suffix);
+
+            this.data.full_name = name.join(" ");
         }
-        
+       
+        // If first name contains a comma, it's probably FIRST,MIDDLE
+        if (
+            this.data.first_name &&
+            this.data.first_name.includes(",") &&
+            !this.data.middle_name
+        ) {
+            let name = this.data.first_name.split(",");
+            this.data.first_name = name[0];
+            this.data.middle_name = name[1];
+        }
+
         if (this.data.country && this.data.country == "USA")
             this.data.country = "US";
         
@@ -351,6 +357,9 @@ var licenseParser = {
         else
             pos += 2;  // Good, move the position forward
         
+        this.log("Filetype: " + this.header.filetype + "\n");
+        this.log("Entries: " + this.header.entries + "\n");
+        
         // Remove header data from keystack, rest is subfile header data
         this.keystack = this.keystack.slice(pos);
         this.process_subfile_header();
@@ -389,5 +398,163 @@ var licenseParser = {
         if (data_key)
             this.data[data_key] = value.trim();
     },
+
+    // Parse a human name string into salutation, first name, middle name, last name, suffix.
+    // https://github.com/chovy/humanparser
+    parseName: function (name, ignoreSuffix) {
+        if (!ignoreSuffix) ignoreSuffix = []
+        const salutations = ['mr', 'master', 'mister', 'mrs', 'miss', 'ms', 'dr', 'prof', 'rev', 'fr', 'judge', 'honorable', 'hon', 'tuan', 'sr', 'srta', 'br', 'pr', 'mx', 'sra'];
+        const suffixes = ['i', 'ii', 'iii', 'iv', 'v', 'senior', 'junior', 'jr', 'sr', 'phd', 'apr', 'rph', 'pe', 'md', 'ma', 'dmd', 'cme', 'qc', 'kc'].filter(suffix => !ignoreSuffix.includes(suffix));
+        const compound = ['vere', 'von', 'van', 'de', 'del', 'della', 'der', 'den', 'di', 'da', 'pietro', 'vanden', 'du', 'st.', 'st', 'la', 'lo', 'ter', 'bin', 'ibn', 'te', 'ten', 'op', 'ben', 'al'];
     
+        let parts = name
+            .trim()
+            .replace(/\b\s+(,\s+)\b/, '$1') // fix name , suffix -> name, suffix
+            .replace(/\b,\b/, ', ')         // fix name,suffix -> name, suffix
+        // look for quoted compound names
+        parts = (parts.match(/[^\s"]+|"[^"]+"/g) || parts.split(/\s+/)).map(n => n.match(/^".*"$/) ? n.slice(1, -1) : n)
+        const attrs = {};
+    
+        if (!parts.length) {
+            return attrs;
+        }
+    
+        if (parts.length === 1) {
+            attrs.firstName = parts[0];
+        }
+    
+        //handle suffix first always, remove trailing comma if there is one
+        if (parts.length > 1 && suffixes.indexOf(parts[parts.length - 1].toLowerCase().replace(/\./g, '')) > -1) {
+            attrs.suffix = parts.pop();
+            parts[parts.length - 1] = parts[parts.length - 1].replace(',', '');
+        }
+    
+        //look for a comma to know we have last name first format
+        const firstNameFirstFormat = parts.every(part => {
+            return part.indexOf(',') === -1;
+        });
+    
+        if (!firstNameFirstFormat) {
+            //last name first format
+            //assuming salutations are never used in this format
+    
+            //tracker variable for where first name begins in parts array
+            let firstNameIndex;
+    
+            //location of first comma will separate last name from rest
+            //join all parts leading to first comma as last name
+            const lastName = parts.reduce((lastName, current, index) => {
+                if (!Array.isArray(lastName)) {
+                    return lastName;
+                }
+                if (current.indexOf(',') === -1) {
+                    lastName.push(current);
+                    return lastName;
+                } else {
+                    current = current.replace(',', '');
+    
+                    // handle case where suffix is included in part of last name (ie: 'Hearst Jr., Willian Randolph')
+                    if (suffixes.indexOf(current.toLowerCase().replace(/\./g, '')) > -1) {
+                        attrs.suffix = current;
+                    } else {
+                        lastName.push(current);
+                    }
+    
+                    firstNameIndex = index + 1;
+                    return lastName.join(' ');
+                }
+            }, []);
+    
+            attrs.lastName = lastName;
+    
+            var remainingParts = parts.slice(firstNameIndex);
+            if (remainingParts.length > 1) {
+                attrs.firstName = remainingParts.shift();
+                attrs.middleName = remainingParts.join(' ');
+            } else if (remainingParts.length) {
+                attrs.firstName = remainingParts[0];
+            }
+    
+            //create full name from attrs object
+            const nameWords = [];
+            if (attrs.firstName) {
+                nameWords.push(attrs.firstName);
+            }
+            if (attrs.middleName) {
+                nameWords.push(attrs.middleName)
+            }
+            nameWords.push(attrs.lastName)
+            if (attrs.suffix) {
+                nameWords.push(attrs.suffix);
+            }
+            attrs.fullName = nameWords.join(' ');
+    
+    
+        } else {
+            //first name first format
+    
+    
+            if (parts.length > 1 && salutations.indexOf(parts[0].toLowerCase().replace(/\./g, '')) > -1) {
+                attrs.salutation = parts.shift();
+    
+                // if we have a salutation assume 2nd part is last name
+                if (parts.length === 1) {
+                    attrs.lastName = parts.shift();
+                } else {
+                    attrs.firstName = parts.shift();
+                }
+            } else {
+                attrs.firstName = parts.shift();
+            }
+    
+            if (!attrs.lastName) {
+                attrs.lastName = parts.length ? parts.pop() : '';
+            }
+    
+            // test for compound last name, we reverse because middle name is last bit to be defined.
+            // We already know lastname, so check next word if its part of a compound last name.
+            const revParts = parts.slice(0).reverse();
+            const compoundParts = [];
+    
+            revParts.every(part => {
+                const test = part.toLowerCase().replace(/\./g, '');
+    
+                if (compound.indexOf(test) > -1) {
+                    compoundParts.push(part);
+    
+                    return true;
+                }
+    
+                //break on first non compound word
+                return false;
+            });
+    
+            //join compound parts with known last name
+            if (compoundParts.length) {
+                attrs.lastName = compoundParts.reverse().join(' ') + ' ' + attrs.lastName;
+    
+                parts = diff(parts, compoundParts);
+            }
+    
+            if (parts.length) {
+                attrs.middleName = parts.join(' ');
+            }
+    
+            //remove comma like "<lastName>, Jr."
+            if (attrs.lastName) {
+                attrs.lastName = attrs.lastName.replace(',', '');
+            }
+    
+            //save a copy of original
+            attrs.fullName = name;
+    
+        }
+        //console.log('attrs:', JSON.stringify(attrs));
+    
+        for (const [k, v] of Object.entries(attrs)) {
+            attrs[k] = v.trim()
+        }
+        return attrs;
+    }
+
 }
