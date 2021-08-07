@@ -75,7 +75,7 @@ var axLicenseParserInject = {
         self.status("Capture complete, setting fields...");
 
         // Check which "screen" we're on
-        if (document.getElementById('checkout_step_2') && 
+        if (!document.getElementById('answers_form') && document.getElementById('checkout_step_2') && 
             document.getElementById('checkout_step_2').parentElement.style.display != "none") {
 
             // We're on the billing contact screen
@@ -194,7 +194,7 @@ var axLicenseParserInject = {
     // Logs debug data from the license parser
     logToConsoleField: function(txt) {
         self = axLicenseParserInject;
-        
+
         if (self.console_field) {
             self.console_field.value += txt;
             self.console_field.scrollTop = self.console_field.scrollHeight;
